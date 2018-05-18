@@ -101,9 +101,24 @@ def ore_calc():
     return oreminerals
     
     
+class Minerals(object):
+    kum = {'Tritanium':0,'Pyerite':0,'Mexallon':0,'Isogen':0,'Nocxium':0,'Zydrine':0, 'Megacyte':0, 'Morphite':0}
+    def __init__(self, Name, Tritanium, Pyerite, Mexallon, Isogen, Nocxium, Zydrine, Megacyte, Morphite):
+        self.Name = Name
+        self.Tritanium = Tritanium
+        self.Pyerite = Pyerite
+        self.Mexallon = Mexallon
+        self.Isogen = Isogen
+        self. Nocxium = Nocxium
+        self.Zydrine = Zydrine
+        self.Megacyte = Megacyte
+        self.Morphite = Morphite
+        Minerals.Tritanium_kum += Tritanium
+        print(Minerals.Tritanium_kum)
+    def getcost(self):
+        return Minerals.Tritanium_kum
 
 
-        
 def prod():
     connection = pymysql.connect(host='localhost',
                              user='root',
@@ -164,7 +179,7 @@ def prod():
         oremineralsdict[ore['Ore']] = ore
 #    print (oremineralsdict)
 
-
+    
     ore = ore_calc()
 
     
@@ -181,45 +196,52 @@ def prod():
         goal[item] = production[item]['quantity']  # Dictionary, Key = Mineral, Index = Amount of Mineral needed for jobs
         
     buydict = dict()
+    print ('PRODUCTION \n %s' % production)
+    print ('GOAL \n %s' % goal)
+    print ('OREMINERALSDICT \n %s' % oremineralsdict)
+    print ('OREDICT \n %s' % oredict)
     
+    for i in goal:
+        buydict[i] = dict()
+        buydict[i]['Mineral'] = int()
+ 
     for item in production:
         if production[item]['materialtypeid'] == mineraldict[item]:
-            print (oremineralsdict[oredict[item]['Ore']])
-            print (oremineralsdict[oredict[item]['Ore']][item])
             for i in goal:
-                basicmineralinore = oremineralsdict[oredict[item]['Ore']][item]
-                buydict[i] = dict()
+                basicmineralinore = oremineralsdict[oredict[i]['Ore']][i]
                 buydict[i]['Ore'] = oremineralsdict[oredict[i]['Ore']]['Ore']
                 buydict[i]['Oreamount'] = int(math.ceil(production[i]['quantity']/(basicmineralinore * Reprocessing)))
-                
-                buydict[i]['Mineral'] = int()
-                print (oremineralsdict[oredict[item]['Ore']][i])
-                goal[i] -= int(math.ceil(production[item]['quantity']/(basicmineralinore * Reprocessing))) * Reprocessing * oremineralsdict[oredict[item]['Ore']][i]
-                buydict[i]['Mineral'] += int(math.ceil(buydict[item]['Oreamount'] * oremineralsdict[oredict[item]['Ore']][i] * Reprocessing)) * oremineralsdict[oredict[item]['Ore']][i]
-            buydict[item]['leftovers'] = buydict[item]['Mineral'] - production[item]['quantity']
+                goal[i] -= int(math.floor(production[i]['quantity']/(basicmineralinore * Reprocessing))) * Reprocessing * oremineralsdict[oredict[item]['Ore']][i]                        
+
+                buydict[i]['Mineral'] += math.ceil(buydict[item]['Oreamount'] * oremineralsdict[oredict[item]['Ore']][i] * Reprocessing)
+
+            print ('%s %s' % (buydict[item]['Mineral'], production[item]['quantity']))
+    for item in production:
+        buydict[item]['leftovers'] = buydict[item]['Mineral'] - production[item]['quantity']
+    
     print (goal)
     print (buydict)
     print ('')
     
-    count = 0
-    while count < 1:
-        for item in production:
-            basicmineralinore = oremineralsdict[oredict[item]['Ore']][item]
-            excess = buydict[item]['leftovers']
-            if excess < basicmineralinore*Reprocessing*(-1):
-                oreexcess = math.floor(excess * (-1))/(basicmineralinore * Reprocessing) 
-                if oreexcess > buydict[item]['Oreamount']:
-                    buydict[item]['Oreamount'] = 0
-                    print (buydict[item]['Oreamount'])
-                else:
-                    buydict[item]['Oreamount'] -= oreexcess
-                for i in goal:
-                    goal[i] -= int(math.ceil(production[item]['quantity']/(basicmineralinore * Reprocessing))) * Reprocessing * oremineralsdict[oredict[item]['Ore']][i]
-                    buydict[item]['Mineral'] += int(math.ceil(buydict[item]['Oreamount'] * oremineralsdict[oredict[item]['Ore']][i] * Reprocessing)) * oremineralsdict[oredict[item]['Ore']][i]
-                buydict[item]['leftovers'] = buydict[item]['Mineral'] - production[item]['quantity']
-        count += 1
-    print (goal)
-    print (buydict)
+#    count = 0
+ #   while count < 1:
+  #      for item in production:
+   #         basicmineralinore = oremineralsdict[oredict[item]['Ore']][item]
+    #        excess = buydict[item]['leftovers']
+     #       if excess < basicmineralinore*Reprocessing*(-1):
+      #          oreexcess = math.floor(excess * (-1))/(basicmineralinore * Reprocessing) 
+       #         if oreexcess > buydict[item]['Oreamount']:
+        #            buydict[item]['Oreamount'] = 0
+         #           print (buydict[item]['Oreamount'])
+          #      else:
+           #         buydict[item]['Oreamount'] -= oreexcess
+            #    for i in goal:
+             #       goal[i] -= int(math.ceil(production[item]['quantity']/(basicmineralinore * Reprocessing))) * Reprocessing * oremineralsdict[oredict[item]['Ore']][i]
+              #      buydict[item]['Mineral'] += int(math.ceil(buydict[item]['Oreamount'] * oremineralsdict[oredict[item]['Ore']][i] * Reprocessing)) * oremineralsdict[oredict[item]['Ore']][i]
+               # buydict[item]['leftovers'] = buydict[item]['Mineral'] - production[item]['quantity']
+ #      count += 1
+  #  print (goal)
+ #   print (buydict)
  #   print (goal)
     #        print (oremineralsdict[oredict[item]['Ore']]['Ore'])
    #         print(math.ceil(production[item]['quantity']/oremineralsdict[oredict[item]['Ore']][item]))
@@ -235,5 +257,4 @@ def prod():
     #print (production_dic)
     #print (production)
 
-    
 prod()
