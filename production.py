@@ -3,7 +3,7 @@ import pymysql
 from collections import defaultdict
 import urllib.request, json
 import math
-
+from mininore import mininore
 
 
 #Pull Data from API (ESI), store in MYSQL
@@ -77,15 +77,24 @@ def ore_calc():
         if i['typeid']>=34 and i['typeid']<=40:
             minerals[i['typename']] = i['price']
         elif i['typeid'] == 11399:
-            minerals[i['typename']] = i['price']
+            minerals[i['typename']] = i['price']    
+
+
+    mineral_in_ore_value = dict()
+    for ore in oreminerals:
+        mineral_in_ore_value[ore['Ore']] = 0
+        for mineral in ore:
+            if mineral != 'Ore' and mineral != 'typeid':
+                mineral_in_ore_value[ore['Ore']] += ore[mineral]*reprocessing*minerals[mineral]
+                
+    ore_percentage_price_mineral = dict()
+    for ore in oreminerals:
+        ore_percentage_price_mineral[ore['Ore']] = dict()
+        for mineral in ore:
+            if mineral != 'Ore' and mineral != 'typeid' and ore[mineral] > 0:
+                ore_percentage_price_mineral[ore['Ore']][mineral] = 100/mineral_in_ore_value[ore['Ore']] * (ore[mineral] * minerals[mineral]*reprocessing)
 
     
-    ores = []
-    for i in min_price_list:
-        if i['typeid'] >= 41 and i['typeid'] != 11399:
-            ores.append(i)
-            
-
     orevalue = defaultdict(int)
     for ore in oreminerals:
         for mineral in ore:
@@ -97,26 +106,16 @@ def ore_calc():
             if mineral != 'Ore' and mineral != 'typeid' and ore[mineral] > 0:
                 ore[mineral] = minerals[mineral] * orevalue[ore['Ore']]
 
+
     oreminerals = [item for item in oreminerals if item['Ore'] != 'Compressed Platinoid Omber' and item['Ore'] != 'Compressed Glossy Scordite' and item['Ore'] != 'Compressed Sparkling Plagioclase']
-    return oreminerals
     
+    returnlist = [oreminerals, ore_percentage_price_mineral]
     
-class Minerals(object):
-    kum = {'Tritanium':0,'Pyerite':0,'Mexallon':0,'Isogen':0,'Nocxium':0,'Zydrine':0, 'Megacyte':0, 'Morphite':0}
-    def __init__(self, Name, Tritanium, Pyerite, Mexallon, Isogen, Nocxium, Zydrine, Megacyte, Morphite):
-        self.Name = Name
-        self.Tritanium = Tritanium
-        self.Pyerite = Pyerite
-        self.Mexallon = Mexallon
-        self.Isogen = Isogen
-        self. Nocxium = Nocxium
-        self.Zydrine = Zydrine
-        self.Megacyte = Megacyte
-        self.Morphite = Morphite
-        Minerals.Tritanium_kum += Tritanium
-        print(Minerals.Tritanium_kum)
-    def getcost(self):
-        return Minerals.Tritanium_kum
+    #print (oreminerals)
+    return returnlist
+    
+
+    
 
 
 def prod():
@@ -174,9 +173,7 @@ def prod():
         return
     for item in mats:
         mineral_needed_total[item['typename']] += amount * item['quantity']
-    #print (mats)
-    #print (mineral_needed_total)
-    
+
     for blueprint in blueprints:
         for ship in ships:
             if ships[ship] == blueprint['typeid']:
@@ -187,24 +184,27 @@ def prod():
     for material in mats:
         production[material['typename']]['quantity'] += material['quantity']
 
-    
+
     oremineralsdict = dict()
     for ore in oreminerals:
         oremineralsdict[ore['Ore']] = ore
     
-    ore = ore_calc()
-
+    oredef = ore_calc()
+    ore = oredef[0]
+    ore_percentage_mineralprice = oredef[1]
+    #print (ore_percentage_mineralprice)
     
     mineraldict = {'Tritanium': 34, 'Pyerite': 35, 'Mexallon': 36, 'Isogen': 37, 'Nocxium': 38, 'Zydrine': 39, 'Megacyte': 40, 'Morphite': 11399}
+    
+
     oredict = dict()
     for mineral in mineraldict:
         ores = []
-        ores = [item for item in ore if item[mineral] > 0]
+        ores = [item for item in ore if item[mineral] > 0 and ore_percentage_mineralprice[item['Ore']][mineral] > lower_limit[mineral].getpercentage()]
         ores = min(ores, key = lambda x:x[mineral])
         oredict[mineral] = ores
-
-        
-
+                                                            
+                    
     buydict = dict()
     #print ('PRODUCTION \n %s' % production)
     #print ('mineral_needed_total \n %s' % mineral_needed_total)
@@ -224,7 +224,7 @@ def prod():
                 buydict[i]['Mineral'] += math.ceil(buydict[item]['Oreamount'] * oremineralsdict[oredict[item]['Ore']][i] * Reprocessing)
     for item in production:
         buydict[item]['leftovers'] = buydict[item]['Mineral'] - production[item]['quantity']
-    print (mineral_needed_total)
+    #print (mineral_needed_total)
     #print (buydict)
   
     count = 0
@@ -250,5 +250,5 @@ def prod():
     
 
 
-
 prod()
+
