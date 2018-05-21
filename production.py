@@ -110,8 +110,6 @@ def ore_calc():
     oreminerals = [item for item in oreminerals if item['Ore'] != 'Compressed Platinoid Omber' and item['Ore'] != 'Compressed Glossy Scordite' and item['Ore'] != 'Compressed Sparkling Plagioclase']
     
     returnlist = [oreminerals, ore_percentage_price_mineral]
-    
-    #print (oreminerals)
     return returnlist
     
 
@@ -144,7 +142,7 @@ def prod():
     
 
                 
-    mineral_needed_total = defaultdict(int)
+    material_needed_total = defaultdict(int)
     name = ""
     mats = list()
     production = dict()
@@ -158,7 +156,8 @@ def prod():
         if not bp:
             print ('Sorry, my db doesnt know how to build this item')
         else:
-            ships[bp[0]['typename']] = bp[0]['typeid']
+            ships[bp[0]['typename']] = defaultdict(int)
+            ships[bp[0]['typename']]['typeid'] = bp[0]['typeid']
             amount = 0
             amount = input('How many of them do you want to build? ')
             bp = bp[0]
@@ -168,21 +167,28 @@ def prod():
             except ValueError:
                 print ('This is not a valid number, please add a number of how many things you want to produce')
             amount = int(amount)
+            ships[bp['typename']]['amount'] = amount
     if not ships:
         print ('you havent selected any ship at all')
         return
+    
     for item in mats:
-        mineral_needed_total[item['typename']] += amount * item['quantity']
+        for ship in ships:
+            if ships[ship]['typeid'] == item['typeid']:
+                material_needed_total[item['typename']] += ships[ship]['amount'] * item['quantity']
 
     for blueprint in blueprints:
         for ship in ships:
-            if ships[ship] == blueprint['typeid']:
+            if ships[ship]['typeid'] == blueprint['typeid']:
                 production[blueprint['typename']] = dict()
                 production[blueprint['typename']]['materialtypeid'] = blueprint['materialtypeid']
                 production[blueprint['typename']]['quantity'] = 0
 
-    for material in mats:
-        production[material['typename']]['quantity'] += material['quantity']
+
+    for item in mats:
+        for ship in ships:
+            if ships[ship]['typeid'] == item['typeid']:
+                production[item['typename']]['quantity'] += ships[ship]['amount'] * item['quantity']
 
 
     oremineralsdict = dict()
@@ -207,24 +213,24 @@ def prod():
                     
     buydict = dict()
     #print ('PRODUCTION \n %s' % production)
-    #print ('mineral_needed_total \n %s' % mineral_needed_total)
+    #print ('material_needed_total \n %s' % material_needed_total)
   #  print ('OREMINERALSDICT \n %s' % oremineralsdict)
    # print ('OREDICT \n %s' % oredict)
 
-    for i in mineral_needed_total:
+    for i in material_needed_total:
         buydict[i] = dict()
         buydict[i]['Mineral'] = int() 
     for item in production:
         if production[item]['materialtypeid'] == mineraldict[item]:
-            for i in mineral_needed_total:
+            for i in material_needed_total:
                 basicmineralinore = oremineralsdict[oredict[i]['Ore']][i]
                 buydict[i]['Ore'] = oremineralsdict[oredict[i]['Ore']]['Ore']
                 buydict[i]['Oreamount'] = math.ceil(production[i]['quantity']/(basicmineralinore * Reprocessing))
-                mineral_needed_total[i] -= math.floor(buydict[item]['Oreamount'] * Reprocessing * oremineralsdict[oredict[item]['Ore']][i])                        
+                material_needed_total[i] -= math.floor(buydict[item]['Oreamount'] * Reprocessing * oremineralsdict[oredict[item]['Ore']][i])                        
                 buydict[i]['Mineral'] += math.ceil(buydict[item]['Oreamount'] * oremineralsdict[oredict[item]['Ore']][i] * Reprocessing)
     for item in production:
         buydict[item]['leftovers'] = buydict[item]['Mineral'] - production[item]['quantity']
-    #print (mineral_needed_total)
+    #print (material_needed_total)
     #print (buydict)
   
     count = 0
@@ -239,15 +245,18 @@ def prod():
                     buydict[item]['Oreamount'] = 0
                 else:
                     buydict[item]['Oreamount'] -= oreexcess
-                for i in mineral_needed_total:
-                    mineral_needed_total[i] += oreexcess * oremineralsdict[oredict[item]['Ore']][i]*Reprocessing
+                for i in material_needed_total:
+                    material_needed_total[i] += oreexcess * oremineralsdict[oredict[item]['Ore']][i]*Reprocessing
                     buydict[i]['Mineral'] -= oreexcess * oremineralsdict[oredict[item]['Ore']][i]*Reprocessing
         for item in production:
             buydict[item]['leftovers'] = buydict[item]['Mineral'] - production[item]['quantity']
         count += 1     
-        print ('mineral_needed_total \n %s' % mineral_needed_total)
-    print ('BUYDICT \n %s' % buydict)
-    
+    #    print ('material_needed_total \n %s' % material_needed_total)
+    #print ('BUYDICT \n %s' % buydict)
+    #print ('PRODUCTION \n %s' % production)
+    for item in production:
+        if buydict[item]['Oreamount'] > 0:
+            print ('%s %s' % (buydict[item]['Ore'], buydict[item]['Oreamount']))
 
 
 prod()
