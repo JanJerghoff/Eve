@@ -6,34 +6,6 @@ import math
 from mininore import mininore
 
 
-#Pull Data from API (ESI), store in MYSQL
-def esi_imp():
-    connection = pymysql.connect(host='localhost',
-                             user='root',
-                             password='password',
-                             db='eve',
-                             charset='utf8mb4',
-                             cursorclass=pymysql.cursors.DictCursor)
-    response = urllib.request.urlopen('https://esi.tech.ccp.is/dev/markets/10000002/orders/?datasource=tranquility&order_type=all&page=1')
-    response.getcode()
-    pages = (response.getheader('X-Pages'))
-    pages = int(pages)
-    print (response.getheader('Expires'))
-    toSQL = []
-    for i in range(1,pages):
-        url = "https://esi.tech.ccp.is/dev/markets/10000002/orders/?datasource=tranquility&order_type=all&page="
-        url += str(i)
-        with urllib.request.urlopen(url) as url:
-            toSQL += json.loads(url.read().decode())
-    
-    cursor = connection.cursor()
-    sql = 'TRUNCATE TABLE jita_prod'
-    cursor.execute(sql)
-    for row in toSQL:
-        cursor.execute('INSERT INTO jita_prod(orderid, typeid, location, volume, price, buy) Values (%s, %s, %s, %s, %s, %s)', (row['order_id'], row['type_id'], row['location_id'], row['volume_remain'], row['price'], row['is_buy_order']))
-    connection.commit()               
-    connection.close
-
 
 def ore_calc():
     connection = pymysql.connect(host='localhost',
@@ -198,7 +170,7 @@ def prod():
     oredef = ore_calc()
     ore = oredef[0]
     ore_percentage_mineralprice = oredef[1]
-    #print (ore_percentage_mineralprice)
+
     
     mineraldict = {'Tritanium': 34, 'Pyerite': 35, 'Mexallon': 36, 'Isogen': 37, 'Nocxium': 38, 'Zydrine': 39, 'Megacyte': 40, 'Morphite': 11399}
     
@@ -212,10 +184,7 @@ def prod():
                                                             
                     
     buydict = dict()
-    #print ('PRODUCTION \n %s' % production)
-    #print ('material_needed_total \n %s' % material_needed_total)
-  #  print ('OREMINERALSDICT \n %s' % oremineralsdict)
-   # print ('OREDICT \n %s' % oredict)
+
 
     for i in material_needed_total:
         buydict[i] = dict()
@@ -230,9 +199,7 @@ def prod():
                 buydict[i]['Mineral'] += math.ceil(buydict[item]['Oreamount'] * oremineralsdict[oredict[item]['Ore']][i] * Reprocessing)
     for item in production:
         buydict[item]['leftovers'] = buydict[item]['Mineral'] - production[item]['quantity']
-    #print (material_needed_total)
-    #print (buydict)
-  
+
     count = 0
     while count < 10:
         for item in production:
@@ -251,13 +218,8 @@ def prod():
         for item in production:
             buydict[item]['leftovers'] = buydict[item]['Mineral'] - production[item]['quantity']
         count += 1     
-    #    print ('material_needed_total \n %s' % material_needed_total)
-    #print ('BUYDICT \n %s' % buydict)
-    #print ('PRODUCTION \n %s' % production)
+
     for item in production:
         if buydict[item]['Oreamount'] > 0:
             print ('%s %s' % (buydict[item]['Ore'], buydict[item]['Oreamount']))
-
-
-prod()
 
